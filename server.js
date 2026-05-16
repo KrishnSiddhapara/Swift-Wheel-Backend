@@ -23,7 +23,7 @@ const { startScheduler } = require('./services/availabilityScheduler');
 dotenv.config();
 
 // Connect to database
-connectDB();
+// connectDB() is now called before starting the server
 
 const app = express();
 const server = http.createServer(app);
@@ -110,6 +110,8 @@ app.use(errorHandler);
 // Start Server
 const PORT = process.env.PORT || 5000;
 
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+connectDB().then(() => {
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
 });
