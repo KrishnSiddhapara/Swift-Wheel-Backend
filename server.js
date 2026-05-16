@@ -3,7 +3,6 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
-const fs = require('fs');
 const connectDB = require('./config/database');
 const { errorHandler } = require('./middleware/errorHandler');
 
@@ -15,13 +14,9 @@ const sellerRoutes = require('./routes/sellerRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const interactionRoutes = require('./routes/interactionRoutes');
-const { startScheduler } = require('./services/availabilityScheduler');
 
 // Load env vars
 dotenv.config();
-
-// Connect to database
-// connectDB() is now called before starting the server
 
 const app = express();
 
@@ -31,14 +26,8 @@ const allowedOrigins = [
   process.env.FRONTEND_URL
 ].filter(Boolean);
 
-// Start the availability scheduler background job
-startScheduler();
-
-// Ensure uploads directory exists
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
-}
+// ❌ REMOVED: startScheduler() — Vercel is serverless, no persistent background jobs
+// ❌ REMOVED: fs/path imports and uploads dir creation — Vercel has no writable filesystem
 
 // Middleware
 app.use(cors({
@@ -51,14 +40,14 @@ app.use(cors({
   },
   credentials: true
 }));
-// app.use(helmet({
-//   crossOriginResourcePolicy: false, // needed for serving local images when accessed from frontend
-// }));
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static directory for uploads
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// ❌ REMOVED: express.static for uploads — no local filesystem on Vercel
+// Use Cloudinary / S3 / any cloud storage for file uploads instead
 
 // Mount routes
 app.use('/api/auth', authRoutes);
@@ -81,11 +70,18 @@ app.get('/', (req, res) => {
 // Custom Error Handler Middleware
 app.use(errorHandler);
 
-// Start Server
-const PORT = process.env.PORT || 5000;
-
-connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+// Vercel handles the server lifecycle — no app.listen() needed
+// For local dev, listen only when not in Vercel environment
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 5000;
+  connectDB().then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
   });
-});
+} else {
+  // On Vercel: connect DB and export app
+  connectDB();
+}
+
+module.exports = app;
