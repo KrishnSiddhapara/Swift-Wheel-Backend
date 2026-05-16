@@ -27,9 +27,22 @@ connectDB();
 
 const app = express();
 const server = http.createServer(app);
+
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://swift-wheel.vercel.app',
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:5173',
+    origin: function(origin, callback) {
+      if(!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
   }
@@ -54,7 +67,16 @@ if (!fs.existsSync(uploadDir)) {
 }
 
 // Middleware
-app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
+app.use(cors({ 
+  origin: function(origin, callback) {
+    if(!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }, 
+  credentials: true 
+}));
 app.use(helmet({
   crossOriginResourcePolicy: false, // needed for serving local images when accessed from frontend
 }));
