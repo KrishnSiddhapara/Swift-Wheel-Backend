@@ -1,0 +1,25 @@
+Royal Enfield Classic 350 -> EXISTS: Royal Enfield Classic 350 
+Yamaha R15 -> EXISTS:  Yamaha R15 
+KTM Duke 200 -> EXISTS: KTM Duke 200
+Bajaj Pulsar NS200 -> EXISTS: Bajaj Pulsar NS200
+Honda Hornet 2.0 -> EXISTS: Honda Hornet 2.0
+Honda Activa 6G -> EXISTS: Honda Activa 6G 
+TVS Jupiter -> EXISTS: TVS Jupiter
+Suzuki Access 125 -> EXISTS: Suzuki Access 125
+Hero Pleasure+ -> EXISTS: Hero Pleasure+
+Maruti Suzuki Swift -> EXISTS: maruti Suzuki Swift 
+Hyundai Creta -> EXISTS: Hyundai Creta
+Tata Nexon -> EXISTS: Tata Nexon
+Toyota Innova Crysta -> EXISTS: Toyota Innova Crysta
+Mahindra Thar -> EXISTS: Mahindra Thar
+Mahindra Scorpio -> EXISTS: Mahindra Scorpio N 
+Honda Shine -> EXISTS: Honda Shine
+Honda Livo -> EXISTS: Honda Livo
+Hero Splendor Plus -> EXISTS: Hero Splendor Plus 
+Hero Glamour -> EXISTS: Hero Glamour
+Suzuki Access 125 -> EXISTS: Suzuki Access 125
+Honda Dio -> EXISTS: Honda Dio
+TVS Star City Plus -> EXISTS: TVS Star City Plus
+Bajaj CT 100 -> EXISTS: Bajaj CT 100
+Yamaha FZ FI -> EXISTS: Yamaha FZ FI
+Suzuki Gixxer -> EXISTS: Suzuki Gixxer
