@@ -51,9 +51,9 @@ app.use(cors({
   },
   credentials: true
 }));
-app.use(helmet({
-  crossOriginResourcePolicy: false, // needed for serving local images when accessed from frontend
-}));
+// app.use(helmet({
+//   crossOriginResourcePolicy: false, // needed for serving local images when accessed from frontend
+// }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
