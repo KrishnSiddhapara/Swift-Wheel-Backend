@@ -2,9 +2,11 @@ const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const helmet = require('helmet');
-const path = require('path');
 const connectDB = require('./config/database');
 const { errorHandler } = require('./middleware/errorHandler');
+
+// Load env vars
+dotenv.config();
 
 // Route imports
 const authRoutes = require('./routes/authRoutes');
@@ -14,9 +16,7 @@ const sellerRoutes = require('./routes/sellerRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const interactionRoutes = require('./routes/interactionRoutes');
-
-// Load env vars
-dotenv.config();
+const paymentRoutes = require('./routes/paymentRoutes');
 
 const app = express();
 
@@ -25,9 +25,6 @@ const allowedOrigins = [
   'https://swift-wheel.vercel.app',
   process.env.FRONTEND_URL
 ].filter(Boolean);
-
-// ❌ REMOVED: startScheduler() — Vercel is serverless, no persistent background jobs
-// ❌ REMOVED: fs/path imports and uploads dir creation — Vercel has no writable filesystem
 
 // Middleware
 app.use(cors({
@@ -46,8 +43,16 @@ app.use(helmet({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ❌ REMOVED: express.static for uploads — no local filesystem on Vercel
-// Use Cloudinary / S3 / any cloud storage for file uploads instead
+// ✅ KEY FIX: Ensure DB is connected on every request (critical for Vercel serverless)
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error('DB connection failed:', error.message);
+    res.status(500).json({ message: 'Database connection failed' });
+  }
+});
 
 // Mount routes
 app.use('/api/auth', authRoutes);
@@ -57,9 +62,6 @@ app.use('/api/seller', sellerRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/interactions', interactionRoutes);
-
-// Payment Routes
-const paymentRoutes = require('./routes/paymentRoutes');
 app.use('/api/payments', paymentRoutes);
 
 // Basic Route
@@ -70,18 +72,12 @@ app.get('/', (req, res) => {
 // Custom Error Handler Middleware
 app.use(errorHandler);
 
-// Vercel handles the server lifecycle — no app.listen() needed
-// For local dev, listen only when not in Vercel environment
+// Local dev only
 if (process.env.NODE_ENV !== 'production') {
   const PORT = process.env.PORT || 5000;
-  connectDB().then(() => {
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
   });
-} else {
-  // On Vercel: connect DB and export app
-  connectDB();
 }
 
 module.exports = app;
