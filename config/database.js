@@ -1,25 +1,26 @@
 const mongoose = require('mongoose');
 
-let isConnected = false;
-
 const connectDB = async () => {
-  if (isConnected) {
-    console.log('Using existing MongoDB connection');
+  // 1 = connected, 2 = connecting — skip if already live
+  if (mongoose.connection.readyState === 1 || mongoose.connection.readyState === 2) {
     return;
   }
 
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/swiftwheel', {
-      serverSelectionTimeoutMS: 10000,
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://siddhaparakrishn_db_user:12341234@cluster0.cghkt0p.mongodb.net/?appName=Cluster0', {
+      serverSelectionTimeoutMS: 30000,
       socketTimeoutMS: 45000,
+      maxPoolSize: 10,
+      minPoolSize: 1,
+      connectTimeoutMS: 30000,
     });
 
-    isConnected = true;
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+    console.log(`MongoDB Connected: ${mongoose.connection.host}`);
   } catch (error) {
     console.error(`MongoDB connection error: ${error.message}`);
-    isConnected = false;
-    throw error; // throw instead of process.exit so Vercel can handle it gracefully
+    // Force close so next request tries fresh
+    await mongoose.connection.close();
+    throw error;
   }
 };
 
