@@ -4,7 +4,7 @@ const Vehicle = require('../models/Vehicle');
 require('dotenv').config();
 
 async function verifyBookingIdempotency() {
-    await mongoose.connect(process.env.MONGO_URI);
+    await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/swiftwheel');
     console.log('Connected to DB');
 
     const vehicleId = '61c4e0fccb499e46665a1234'; // 24-char hex
