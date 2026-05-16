@@ -69,6 +69,23 @@ app.get('/', (req, res) => {
   res.send('SwiftWheel API is running...');
 });
 
+app.get('/api/debug', async (req, res) => {
+  try {
+    await connectDB();
+    const mongoose = require('mongoose');
+    const db = mongoose.connection.db;
+    const collections = await db.listCollections().toArray();
+    const dbName = db.databaseName;
+    res.json({ 
+      connected: true, 
+      database: dbName,
+      collections: collections.map(c => c.name)
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Custom Error Handler Middleware
 app.use(errorHandler);
 
