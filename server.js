@@ -54,13 +54,13 @@ if (!fs.existsSync(uploadDir)) {
 }
 
 // Middleware
-const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'];
+const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'https://swift-wheel.vercel.app'];
 if (process.env.FRONTEND_URL) {
   allowedOrigins.push(process.env.FRONTEND_URL);
 }
-app.use(cors({ 
-  origin: allowedOrigins, 
-  credentials: true 
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
 }));
 app.use(helmet({
   crossOriginResourcePolicy: false, // needed for serving local images when accessed from frontend
@@ -75,7 +75,7 @@ app.get('/uploads/:filename', (req, res) => {
   const filename = req.params.filename;
   const localPath = path.join(__dirname, 'uploads', filename);
   const tempPath = path.join(os.tmpdir(), filename);
-  
+
   if (fs.existsSync(localPath)) {
     return res.sendFile(localPath);
   } else if (fs.existsSync(tempPath)) {
