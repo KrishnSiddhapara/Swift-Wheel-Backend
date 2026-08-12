@@ -1,12 +1,13 @@
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const helmet = require('helmet');
+const path = require('path');
+const fs = require('fs');
 const connectDB = require('./config/database');
 const { errorHandler } = require('./middleware/errorHandler');
-
-// Load env vars
-dotenv.config();
 
 // Route imports
 const authRoutes = require('./routes/authRoutes');
@@ -16,41 +17,71 @@ const sellerRoutes = require('./routes/sellerRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const interactionRoutes = require('./routes/interactionRoutes');
-const paymentRoutes = require('./routes/paymentRoutes');
+const { startScheduler } = require('./services/availabilityScheduler');
+
+// Load env vars
+dotenv.config();
+
+// Connect to database before starting server
+// connectDB() will be called at the bottom
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
+  }
+});
 
-const allowedOrigins = [
-  'http://localhost:5173',
-  'https://swift-wheel.vercel.app',
-  process.env.FRONTEND_URL
-].filter(Boolean);
+app.set('io', io);
+
+io.on('connection', (socket) => {
+  console.log('A user connected via socket:', socket.id);
+  socket.on('disconnect', () => {
+    console.log('A user disconnected:', socket.id);
+  });
+});
+
+// Start the availability scheduler background job
+startScheduler(io);
+
+// Ensure uploads directory exists
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
 
 // Middleware
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true
+const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'];
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+app.use(cors({ 
+  origin: allowedOrigins, 
+  credentials: true 
 }));
 app.use(helmet({
-  crossOriginResourcePolicy: false,
+  crossOriginResourcePolicy: false, // needed for serving local images when accessed from frontend
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ KEY FIX: Ensure DB is connected on every request (critical for Vercel serverless)
-app.use(async (req, res, next) => {
-  try {
-    await connectDB();
-    next();
-  } catch (error) {
-    console.error('DB connection failed:', error.message);
-    res.status(500).json({ message: 'Database connection failed' });
+const os = require('os');
+
+// Dynamic handler to serve uploads from either the local directory or the system temp directory
+app.get('/uploads/:filename', (req, res) => {
+  const filename = req.params.filename;
+  const localPath = path.join(__dirname, 'uploads', filename);
+  const tempPath = path.join(os.tmpdir(), filename);
+  
+  if (fs.existsSync(localPath)) {
+    return res.sendFile(localPath);
+  } else if (fs.existsSync(tempPath)) {
+    return res.sendFile(tempPath);
+  } else {
+    return res.status(404).send('File not found');
   }
 });
 
@@ -62,6 +93,9 @@ app.use('/api/seller', sellerRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/interactions', interactionRoutes);
+
+// Payment Routes
+const paymentRoutes = require('./routes/paymentRoutes');
 app.use('/api/payments', paymentRoutes);
 
 // Basic Route
@@ -69,32 +103,14 @@ app.get('/', (req, res) => {
   res.send('SwiftWheel API is running...');
 });
 
-app.get('/api/debug', async (req, res) => {
-  try {
-    await connectDB();
-    const mongoose = require('mongoose');
-    const db = mongoose.connection.db;
-    const collections = await db.listCollections().toArray();
-    const dbName = db.databaseName;
-    res.json({ 
-      connected: true, 
-      database: dbName,
-      collections: collections.map(c => c.name)
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // Custom Error Handler Middleware
 app.use(errorHandler);
 
-// Local dev only
-if (process.env.NODE_ENV !== 'production') {
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => {
+// Start Server
+const PORT = 5000;
+
+connectDB().then(() => {
+  server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
-}
-
-module.exports = app;
+});

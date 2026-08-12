@@ -1,10 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { optional } = require('../middleware/authMiddleware');
 const { getVehicles, getVehicleById } = require('../controllers/vehicleController');
 
-router.get('/', optional, getVehicles);
-router.get('/search', optional, getVehicles);
-router.get('/:id', optional, getVehicleById);
+router.get('/', getVehicles);
+router.get('/search', getVehicles);
+router.get('/:id', getVehicleById);
 
 module.exports = router;

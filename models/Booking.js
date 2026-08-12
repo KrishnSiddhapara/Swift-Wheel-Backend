@@ -28,12 +28,12 @@ const bookingSchema = new mongoose.Schema({
   voterId: { type: String, required: true },
   bookingStatus: { 
     type: String, 
-    enum: ['Pending', 'Confirmed', 'Cancelled', 'Completed'], 
+    enum: ['Pending', 'Confirmed', 'Active', 'Cancelled', 'Completed'], 
     default: 'Pending' 
   },
   paymentStatus: { 
     type: String, 
-    enum: ['Pending', 'Paid', 'Failed'], 
+    enum: ['Pending', 'Paid', 'Failed', 'Refunded'], 
     default: 'Pending' 
   },
   paymentId: { type: String },

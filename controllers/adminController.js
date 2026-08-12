@@ -13,10 +13,10 @@ const getDashboardStats = async (req, res) => {
     const totalSellers = await User.countDocuments({ role: 'seller' });
     const totalVehicles = await Vehicle.countDocuments();
     const totalBookings = await Booking.countDocuments();
-
+    
     // Revenue calculation from completed bookings
-    const completedBookings = await Booking.find({ paymentStatus: 'Completed' });
-    const totalRevenue = completedBookings.reduce((acc, item) => acc + item.totalPrice, 0);
+    const completedBookings = await Booking.find({ paymentStatus: 'Paid' });
+    const totalRevenue = completedBookings.reduce((acc, item) => acc + (item.totalAmount || 0), 0);
 
     // Most rented vehicle
     const mostRentedAggregation = await Booking.aggregate([
@@ -24,7 +24,7 @@ const getDashboardStats = async (req, res) => {
       { $sort: { count: -1 } },
       { $limit: 1 }
     ]);
-
+    
     let mostRentedVehicle = null;
     if (mostRentedAggregation.length > 0) {
       mostRentedVehicle = await Vehicle.findById(mostRentedAggregation[0]._id).select('vehicleName brand category image');
@@ -40,11 +40,11 @@ const getDashboardStats = async (req, res) => {
 
     // Monthly revenue & bookings trends
     const trendsAggregation = await Booking.aggregate([
-      { $match: { paymentStatus: 'Completed', createdAt: { $exists: true } } },
-      {
-        $group: {
+      { $match: { paymentStatus: 'Paid', createdAt: { $exists: true } } },
+      { 
+        $group: { 
           _id: { month: { $month: "$createdAt" }, year: { $year: "$createdAt" } },
-          revenue: { $sum: "$totalPrice" },
+          revenue: { $sum: "$totalAmount" },
           bookings: { $sum: 1 }
         }
       },
@@ -201,8 +201,6 @@ const approveSeller = async (req, res) => {
     const seller = await User.findById(req.params.id);
     if (seller && seller.role === 'seller') {
       seller.status = 'Approved';
-      seller.isApproved = true;
-      seller.canLogin = true;
       await seller.save();
       res.json({ message: 'Seller approved successfully', sellerId: seller._id, status: seller.status });
     } else {
@@ -221,8 +219,6 @@ const rejectSeller = async (req, res) => {
     const seller = await User.findById(req.params.id);
     if (seller && seller.role === 'seller') {
       seller.status = 'Rejected';
-      seller.isApproved = false;
-      seller.canLogin = false;
       await seller.save();
       res.json({ message: 'Seller rejected successfully', sellerId: seller._id, status: seller.status });
     } else {
@@ -264,7 +260,7 @@ const getVehicles = async (req, res) => {
     if (req.query.category && req.query.category !== 'All') {
       query.category = req.query.category;
     }
-
+    
     if (req.query.search) {
       query.$or = [
         { vehicleName: { $regex: req.query.search, $options: 'i' } },
@@ -277,7 +273,7 @@ const getVehicles = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
-
+      
     const total = await Vehicle.countDocuments(query);
 
     res.json({
@@ -300,7 +296,7 @@ const updateVehicleStatus = async (req, res) => {
     if (vehicle) {
       if (req.body.status) vehicle.status = req.body.status; // e.g., Approved, Rejected
       if (req.body.availability !== undefined) vehicle.availability = req.body.availability;
-
+      
       const updatedVehicle = await vehicle.save();
       res.json(updatedVehicle);
     } else {
@@ -344,7 +340,7 @@ const getBookings = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
-
+      
     const total = await Booking.countDocuments();
 
     res.json({

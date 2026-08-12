@@ -41,10 +41,10 @@ router.route('/sellers')
   .get(getSellers);
 
 router.route('/sellers/:id/approve')
-  .patch(approveSeller);
+  .put(approveSeller);
 
 router.route('/sellers/:id/reject')
-  .patch(rejectSeller);
+  .put(rejectSeller);
 
 router.route('/sellers/:id')
   .delete(deleteSeller);

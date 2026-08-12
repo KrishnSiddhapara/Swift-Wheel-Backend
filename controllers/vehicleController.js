@@ -8,13 +8,13 @@ const Booking = require('../models/Booking');
 const getVehicles = async (req, res) => {
   try {
     const { location, vehicleType, category, priceRange, availability, startDate, endDate } = req.query;
-
+    
     let query = {};
 
     if (location) {
       query.location = { $regex: location, $options: 'i' };
     }
-
+    
     // Support both vehicleType and category in query for backward compatibility
     const catSearch = category || vehicleType;
     if (catSearch && catSearch !== 'All Vehicles') {
@@ -38,29 +38,14 @@ const getVehicles = async (req, res) => {
 
     // Handle real-time availability using startDate and endDate
     if (startDate && endDate) {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
+      const overlappingBookings = await Booking.find({
+        bookingStatus: { $in: ['Pending', 'Confirmed'] },
+        $or: [
+          { startDate: { $lt: new Date(endDate) }, endDate: { $gt: new Date(startDate) } }
+        ]
+      });
 
-      // Build booking filter to find overlapping bookings
-      const bookingFilter = {
-        startDate: { $lt: end },
-        endDate: { $gt: start },
-      };
-
-      if (req.user) {
-        // Exclude vehicles blocked by Confirmed bookings OR
-        // Pending bookings from OTHER users (not the current user)
-        bookingFilter.$or = [
-          { bookingStatus: 'Confirmed' },
-          { bookingStatus: 'Pending', userId: { $ne: req.user._id } }
-        ];
-      } else {
-        bookingFilter.bookingStatus = { $in: ['Pending', 'Confirmed'] };
-      }
-
-      const overlappingBookings = await Booking.find(bookingFilter);
-      const unavailableVehicleIds = overlappingBookings.map(b => b.vehicleId.toString());
-
+      const unavailableVehicleIds = overlappingBookings.map(b => b.vehicleId);
       if (unavailableVehicleIds.length > 0) {
         query._id = { $nin: unavailableVehicleIds };
       }
@@ -78,7 +63,6 @@ const getVehicles = async (req, res) => {
 
     res.json({ vehicles, page, pages: Math.ceil(count / pageSize), total: count });
   } catch (error) {
-    console.error('getVehicles error:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -96,7 +80,6 @@ const getVehicleById = async (req, res) => {
       res.status(404).json({ message: 'Vehicle not found' });
     }
   } catch (error) {
-    console.error('getVehicleById error:', error);
     res.status(500).json({ message: error.message });
   }
 };

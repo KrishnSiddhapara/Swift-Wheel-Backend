@@ -42,11 +42,11 @@ const getSellerVehicles = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const query = { sellerId: req.user._id };
-
+    
     if (req.query.category && req.query.category !== 'All') {
       query.category = req.query.category;
     }
-
+    
     if (req.query.search) {
       query.$or = [
         { vehicleName: { $regex: req.query.search, $options: 'i' } },
@@ -58,7 +58,7 @@ const getSellerVehicles = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
-
+      
     const total = await Vehicle.countDocuments(query);
 
     res.json({
@@ -78,7 +78,7 @@ const getSellerVehicles = async (req, res) => {
 const updateVehicle = async (req, res) => {
   try {
     const { vehicleName, brand, category, pricePerHour, pricePerDay, location, description, availability, seatingCapacity, mileage, color, fuelType, transmission } = req.body;
-
+    
     const vehicle = await Vehicle.findById(req.params.id);
 
     if (vehicle) {
@@ -99,7 +99,7 @@ const updateVehicle = async (req, res) => {
       vehicle.color = color || vehicle.color;
       if (fuelType) vehicle.fuelType = fuelType;
       if (transmission) vehicle.transmission = transmission;
-
+      
       if (req.files && req.files.length > 0) {
         vehicle.images = req.files.map(file => `/uploads/${file.filename}`);
       }
@@ -149,11 +149,11 @@ const getSellerBookings = async (req, res) => {
 
     const bookings = await Booking.find(query)
       .populate('userId', 'name email phone')
-      .populate('vehicleId', 'vehicleName brand category image')
+      .populate('vehicleId', 'vehicleName brand category images')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
-
+      
     const total = await Booking.countDocuments(query);
 
     res.json({
@@ -172,12 +172,12 @@ const getSellerBookings = async (req, res) => {
 // @access  Private/Seller
 const getSellerEarnings = async (req, res) => {
   try {
-    const bookings = await Booking.find({
-      sellerId: req.user._id,
-      paymentStatus: 'Paid'
+    const bookings = await Booking.find({ 
+      sellerId: req.user._id, 
+      paymentStatus: 'Paid' 
     });
 
-    const totalEarnings = bookings.reduce((acc, curr) => acc + curr.totalAmount, 0);
+    const totalEarnings = bookings.reduce((acc, curr) => acc + (curr.totalAmount || 0), 0);
 
     res.json({
       totalEarnings,
@@ -194,7 +194,7 @@ const getSellerEarnings = async (req, res) => {
 const updateBookingStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    let booking = await Booking.findById(req.params.id);
+    const booking = await Booking.findById(req.params.id);
 
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
@@ -204,45 +204,9 @@ const updateBookingStatus = async (req, res) => {
       return res.status(401).json({ message: 'Not authorized to update this booking' });
     }
 
-    booking = await Booking.findByIdAndUpdate(
-      req.params.id,
-      { bookingStatus: status },
-      { new: true }
-    );
-
-    if (status === 'Cancelled' || status === 'Completed') {
-      const vehicle = await Vehicle.findById(booking.vehicleId);
-      if (vehicle) {
-        vehicle.availabilityStatus = 'available';
-        vehicle.expectedAvailableAt = null;
-        await vehicle.save();
-
-        const io = req.app.get('io');
-        if (io) {
-          io.emit('vehicle_availability_updated', {
-            vehicleId: vehicle._id,
-            availabilityStatus: 'available',
-            expectedAvailableAt: null
-          });
-        }
-      }
-    } else if (status === 'Confirmed') {
-      const vehicle = await Vehicle.findById(booking.vehicleId);
-      if (vehicle) {
-        vehicle.availabilityStatus = 'unavailable';
-        await vehicle.save();
-
-        const io = req.app.get('io');
-        if (io) {
-          io.emit('vehicle_availability_updated', {
-            vehicleId: vehicle._id,
-            availabilityStatus: 'unavailable'
-          });
-        }
-      }
-    }
-
-    res.json(booking);
+    booking.bookingStatus = status;
+    const updatedBooking = await booking.save();
+    res.json(updatedBooking);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -1,18 +1,22 @@
 const express = require('express');
 const router = express.Router();
-const { createBooking, getMyBookings, cancelBooking, calculatePrice } = require('../controllers/bookingController');
+const {
+  createBooking,
+  getMyBookings,
+  getBookingById,
+  cancelBooking,
+  calculatePrice
+} = require('../controllers/bookingController');
 const { protect } = require('../middleware/authMiddleware');
 
-router.route('/calculate-price')
-  .post(calculatePrice);
+router.post('/calculate-price', calculatePrice);
 
-router.route('/')
-  .post(protect, createBooking);
+router.get('/my-bookings', protect, getMyBookings);
 
-router.route('/my-bookings')
-  .get(protect, getMyBookings);
+router.post('/', protect, createBooking);
 
 router.route('/:id')
+  .get(protect, getBookingById)
   .delete(protect, cancelBooking);
 
 module.exports = router;

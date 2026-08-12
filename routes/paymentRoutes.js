@@ -5,6 +5,7 @@ const { protect } = require('../middleware/authMiddleware');
 const router = express.Router();
 
 router.post('/create-order', protect, createOrder);
-router.post('/verify', protect, verifyPayment);
+// Public: Cashfree return_url reload must succeed without depending on JWT timing/session
+router.post('/verify', verifyPayment);
 
 module.exports = router;
